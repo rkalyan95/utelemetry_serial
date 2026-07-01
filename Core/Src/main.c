@@ -21,7 +21,7 @@
 #include "usart.h"
 #include "gpio.h"
 #include "telemtrycustom.h"
-
+#include <string.h>
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 float sensor_1 = 123.456;
@@ -141,6 +141,34 @@ tel_information_t mysensor6 = {
     .information_buffer = &mixer_test
 };
 
+float sensor_7 = 3.14159;
+
+tel_information_t mysensor7 = {
+    .data_synch = 0xAA,
+    .information_type = 0x01,
+    .information_id = 0x07, // Mixer 👈 Fix ID match
+    .information_len = sizeof(sensor_7),
+    .information_buffer = &sensor_7
+};
+
+static const char sensor_8[] = "Hello, World!";
+tel_information_t mysensor8 = {
+    .data_synch = 0xAA,
+    .information_type = 0x05,
+    .information_id = 0x08, // Mixer 👈 Fix ID match
+    .information_len = sizeof(sensor_8) - 1,
+    .information_buffer = &sensor_8
+};
+
+uint8_t sensor_9[5] = {1, 2, 3, 4, 5};
+tel_information_t mysensor9 = {
+    .data_synch = 0xAA,
+    .information_type = 0x02,
+    .information_id = 0x09, // Mixer 👈 Fix ID match
+    .information_len = sizeof(sensor_9),
+    .information_buffer = &sensor_9
+};
+
 tel_cmd_t imu_cmd = {
     
     .cmd_synch = 0x55,
@@ -181,7 +209,30 @@ tel_cmd_t mixer_cmd = {
     .crc = 0xFFFF
 };
 
-tel_cmd_t *sensor_array[6] = { &imu_cmd, &bmp_cmd , &gps_cmd, &sys_status_cmd, &motor_cmd, &mixer_cmd };
+tel_cmd_t random_cmd = {
+    .cmd_synch = 0x55,
+    .cmd_id = 0x07,
+    .tx_buffer = (uint8_t *)"Random:@f",
+    .crc = 0xFFFF
+};
+
+tel_cmd_t string_cmd = {
+    .cmd_synch = 0x55,
+    .cmd_id = 0x08,
+    .tx_buffer = (uint8_t *)"String:@s",
+    .crc = 0xFFFF
+};
+
+tel_cmd_t bytes_cmd = {
+    .cmd_synch = 0x55,
+    .cmd_id = 0x09,
+    .tx_buffer = (uint8_t *)"Bytes:@",
+    .crc = 0xFFFF
+};
+
+
+
+tel_cmd_t *sensor_array[9] = { &imu_cmd, &bmp_cmd , &gps_cmd, &sys_status_cmd, &motor_cmd, &mixer_cmd ,&random_cmd, &string_cmd,&bytes_cmd};
 
 /* USER CODE END Includes */
 
@@ -265,10 +316,10 @@ int main(void)
       // Using a short timeout (100ms) so it repeatedly checks the UART interface
       HAL_UART_Receive(&huart1, &boot_sync_signal, 1, 100);
   }
-  register_devices(sensor_array, 6);
+  register_devices(sensor_array, 9);
   
   //receive ack after this untill proceeding further
-  register_response(sensor_array, 6);
+  register_response(sensor_array, 9);
   
   /* USER CODE END 2 */
 
@@ -289,6 +340,12 @@ int main(void)
     telemtry_custom_send(&mysensor5);
     HAL_Delay(1000);
     telemtry_custom_send(&mysensor6);
+    HAL_Delay(1000);
+    telemtry_custom_send(&mysensor7);
+    HAL_Delay(1000);
+    telemtry_custom_send(&mysensor8);
+    HAL_Delay(1000);
+    telemtry_custom_send(&mysensor9);
     HAL_Delay(1000);
   }
   /* USER CODE END 3 */
