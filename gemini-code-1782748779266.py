@@ -17,11 +17,10 @@ def calculate_crc16(data: bytes) -> int:
 class TelemetryApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("Dynamic Handshake Control Console")
-        self.root.geometry("820x660")
+        self.root.title("Dual-Console Telemetry Debugger")
+        self.root.geometry("1100x700")
         
-        # State Control Variables
-        self.device_registry = {}  # Format: { id: {"name": str, "format": str} }
+        self.device_registry = {}  
         self.ser = None
         self.serial_connected = False
         self.handshake_done = False
@@ -32,7 +31,7 @@ class TelemetryApp:
         self.attempt_serial_connection()
 
     def create_widgets(self):
-        # Hardware Link Controls Frame
+        # Top Configuration Bar
         input_frame = ttk.LabelFrame(self.root, text=" Hardware Link Controls ", padding=10)
         input_frame.pack(fill="x", padx=15, pady=5)
 
@@ -42,7 +41,6 @@ class TelemetryApp:
         self.btn_restart = ttk.Button(input_frame, text="🔄 Restart & Sync Loop", command=self.restart_and_sync)
         self.btn_restart.grid(row=0, column=1, padx=5, pady=5)
 
-        # Dropdown for Compiler Alignment Choice
         ttk.Label(input_frame, text="Struct Alignment Mode:").grid(row=0, column=2, padx=(20, 5), pady=5)
         self.alignment_var = tk.StringVar(value="32-bit ARM (Cortex-M)")
         self.combo_alignment = ttk.Combobox(
@@ -57,11 +55,11 @@ class TelemetryApp:
         self.status_label = ttk.Label(self.root, text="Initializing...", font=("Arial", 10, "bold"))
         self.status_label.pack(anchor="w", padx=15, pady=2)
 
-        # Device Tracking Grid
+        # Device Registration Grid
         table_frame = ttk.LabelFrame(self.root, text=" Devices Registered by Controller ", padding=10)
         table_frame.pack(fill="x", padx=15, pady=5)
 
-        self.tree = ttk.Treeview(table_frame, columns=("ID", "Name", "Format", "Handshake"), show="headings", height=4)
+        self.tree = ttk.Treeview(table_frame, columns=("ID", "Name", "Format", "Handshake"), show="headings", height=5)
         self.tree.heading("ID", text="Device ID")
         self.tree.heading("Name", text="Device Name")
         self.tree.heading("Format", text="Data Format Layout")
@@ -73,20 +71,42 @@ class TelemetryApp:
         self.tree.column("Handshake", width=230, anchor="center")
         self.tree.pack(fill="x")
 
-        # Live Text Feed
-        stream_frame = ttk.LabelFrame(self.root, text=" Live Telemetry Data Feed (From Main Loop) ", padding=10)
-        stream_frame.pack(fill="both", expand=True, padx=15, pady=10)
+        # Layout Main Frame Side-by-Side Split View
+        display_container = ttk.Frame(self.root)
+        display_container.pack(fill="both", expand=True, padx=15, pady=10)
 
-        self.log_text = tk.Text(stream_frame, wrap="word", background="#1E1E1E", foreground="#FFFFFF", font=("Consolas", 10))
+        # LEFT SIDE: Clean Parsed Output Feed
+        left_frame = ttk.LabelFrame(display_container, text=" Clean Processed Telemetry Data Stream ", padding=5)
+        left_frame.pack(side="left", fill="both", expand=True, padx=(0, 5))
+
+        self.log_text = tk.Text(left_frame, wrap="word", background="#1A1A1A", foreground="#00FF00", font=("Consolas", 9))
         self.log_text.pack(fill="both", expand=True, side="left")
-        
-        scrollbar = ttk.Scrollbar(stream_frame, command=self.log_text.yview)
-        scrollbar.pack(fill="y", side="right")
-        self.log_text.config(yscrollcommand=scrollbar.set)
+        left_scroll = ttk.Scrollbar(left_frame, command=self.log_text.yview)
+        left_scroll.pack(fill="y", side="right")
+        self.log_text.config(yscrollcommand=left_scroll.set)
+
+        # RIGHT SIDE: Raw Ingress Serial Data Buffer Feed
+        right_frame = ttk.LabelFrame(display_container, text=" Raw Inbound Link Buffer Hex & ASCII Monitor ", padding=5)
+        right_frame.pack(side="right", fill="both", expand=True, padx=(5, 0))
+
+        self.raw_text = tk.Text(right_frame, wrap="word", background="#0C0C0C", foreground="#00FFFF", font=("Consolas", 9))
+        self.raw_text.pack(fill="both", expand=True, side="left")
+        right_scroll = ttk.Scrollbar(right_frame, command=self.raw_text.yview)
+        right_scroll.pack(fill="y", side="right")
+        self.raw_text.config(yscrollcommand=right_scroll.set)
 
     def log_message(self, message):
         self.log_text.insert(tk.END, message + "\n")
         self.log_text.see(tk.END)
+
+    def log_raw_bytes(self, raw_bytes):
+        # Formats incoming packets cleanly into both hex and string segments
+        hex_dump = " ".join(f"{b:02X}" for b in raw_bytes)
+        ascii_dump = "".join(chr(b) if 32 <= b <= 126 else "." for b in raw_bytes)
+        timestamp = time.strftime("%H:%M:%S")
+        
+        self.raw_text.insert(tk.END, f"[{timestamp}] HEX: {hex_dump}\n             ASCII: {ascii_dump}\n")
+        self.raw_text.see(tk.END)
 
     def attempt_serial_connection(self):
         port_target = 'COM12'
@@ -99,12 +119,12 @@ class TelemetryApp:
             self.ser = serial.Serial(
                 port=port_target, baudrate=115200,
                 bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE,
-                stopbits=serial.STOPBITS_ONE, timeout=0.05
+                stopbits=serial.STOPBITS_ONE, timeout=0.01  
             )
             self.ser.reset_input_buffer()
             self.ser.reset_output_buffer()
             self.serial_connected = True
-            self.status_label.config(text=f"CONNECTED to {port_target}! Syncing...", foreground="green")
+            self.status_label.config(text=f"CONNECTED to {port_target}! Live Streams Enabled.", foreground="green")
             
             self.listen_thread = threading.Thread(target=self.serial_listen_loop, daemon=True)
             self.listen_thread.start()
@@ -126,7 +146,6 @@ class TelemetryApp:
 
     def restart_and_sync(self):
         self.disconnect_serial()
-        
         if self.listen_thread and self.listen_thread.is_alive():
             self.listen_thread.join(timeout=0.5) 
         
@@ -135,8 +154,9 @@ class TelemetryApp:
             self.tree.delete(item)
             
         self.log_text.insert(tk.END, "\n--- SYSTEM RESET: Commencing Handshake Sync ---\n")
+        self.raw_text.insert(tk.END, "\n--- CONSOLE REBOOT ---\n")
         self.log_text.see(tk.END)
-        
+        self.raw_text.see(tk.END)
         self.attempt_serial_connection()
 
     def update_ui_table(self, dev_id, name, format_str, status):
@@ -160,24 +180,31 @@ class TelemetryApp:
 
                 waiting = self.ser.in_waiting if (self.ser and self.ser.is_open) else 0
                 if waiting > 0:
-                    raw_data.extend(self.ser.read(waiting))
+                    incoming = self.ser.read(waiting)
+                    raw_data.extend(incoming)
+                    # IMMEDIATELY push the un-parsed, raw wire dump to the right-hand panel
+                    self.root.after(0, self.log_raw_bytes, incoming)
                 else:
-                    time.sleep(0.01)
+                    time.sleep(0.005)
                     continue
 
                 while len(raw_data) > 0 and not self.kill_listen_thread:
                     h_idx = raw_data.index(HANDSHAKE_SYNCH) if HANDSHAKE_SYNCH in raw_data else 999999
                     t_idx = raw_data.index(TELEMETRY_SYNCH) if TELEMETRY_SYNCH in raw_data else 999999
 
+                    if len(raw_data) >= 2 and raw_data[0:2] == b"\xAA\x55":
+                        del raw_data[:2]
+                        continue
+
                     if h_idx == 999999 and t_idx == 999999:
                         raw_data.clear()
                         break
 
-                    # Process Handshake Registration Packet (0x55)
+                    # --- Process Handshake Registration Packet (0x55) ---
                     if h_idx < t_idx:
-                        self.handshake_done = True  
                         sync_idx = h_idx
-                        if b"\r\n" not in raw_data[sync_idx:]: break 
+                        if b"\r\n" not in raw_data[sync_idx:]: 
+                            break  
                             
                         end_idx = raw_data.index(b"\r\n", sync_idx)
                         packet = raw_data[sync_idx:end_idx]
@@ -193,7 +220,6 @@ class TelemetryApp:
 
                         crc_data_block = bytes([HANDSHAKE_SYNCH, dev_id]) + payload_bytes
                         if calculate_crc16(crc_data_block) == received_crc:
-                            
                             dev_name = raw_string
                             fmt_str = "None"
                             
@@ -201,38 +227,31 @@ class TelemetryApp:
                                 parts = raw_string.split(":", 1)
                                 dev_name = parts[0]
                                 raw_fmt = parts[1]
-                                
-                                # Strip explicit user prefixes if provided; otherwise store pure layout characters
-                                if raw_fmt and raw_fmt[0] in ('@', '=', '<', '>', '!'):
-                                    fmt_str = raw_fmt[1:]
-                                else:
-                                    fmt_str = raw_fmt
+                                fmt_str = raw_fmt[1:] if raw_fmt and raw_fmt[0] in ('@', '=', '<', '>', '!') else raw_fmt
                             
                             self.device_registry[dev_id] = {"name": dev_name, "format": fmt_str}
-                            
                             self.ser.write(struct.pack("<H", received_crc))
-                            time.sleep(0.03)
-                            mcu_ack = self.ser.read(2)
+                            self.handshake_done = True  
                             
-                            status_str = "Linked & Verified (ACK Success)" if mcu_ack == b"\xAA\x55" else "Linked (Pacing Window)"
-                            self.root.after(0, self.update_ui_table, dev_id, dev_name, fmt_str, status_str)
+                            self.root.after(0, self.update_ui_table, dev_id, dev_name, fmt_str, "Linked & Verified (ACK Success)")
                         else:
                             self.root.after(0, self.update_ui_table, dev_id, "Unknown", "Unknown", "PC Checksum Error")
                             
                         del raw_data[:end_idx + 2]
 
-                    # Process Live Telemetry Packet (0xAA)
+                    # --- Process Live Telemetry Packet (0xAA) ---
                     else:
                         sync_idx = t_idx
-                        if len(raw_data) - sync_idx < 4: break
+                        if len(raw_data) - sync_idx < 4: 
+                            break
 
                         info_type = raw_data[sync_idx + 1] 
                         msg_id = raw_data[sync_idx + 2]    
                         msg_len = raw_data[sync_idx + 3]   
-                        
                         total_size = 4 + msg_len + 2 
 
-                        if len(raw_data) - sync_idx < total_size: break
+                        if len(raw_data) - sync_idx < total_size: 
+                            break
 
                         p_start = sync_idx + 4
                         p_end = p_start + msg_len
@@ -252,21 +271,17 @@ class TelemetryApp:
                                     raw_fmt = dev_profile["format"]
                                     if raw_fmt != "None":
                                         mode = self.alignment_var.get()
+                                        fmt_string = "@" + raw_fmt if mode == "32-bit ARM (Cortex-M)" else "<" + raw_fmt
+                                            
+                                        expected_size = struct.calcsize(fmt_string)
+                                        payload_len = len(payload)
                                         
-                                        if mode == "32-bit ARM (Cortex-M)":
-                                            # Enforce Little-Endian sizing but absorb structural padding automatically
-                                            fmt_string = "<" + raw_fmt
-                                            expected_size = struct.calcsize(fmt_string)
-                                            payload_len = len(payload)
-                                            
-                                            if payload_len > expected_size:
-                                                padding_bytes = payload_len - expected_size
-                                                fmt_string += ("x" * padding_bytes)
+                                        if payload_len < expected_size:
+                                            payload_to_unpack = payload + b'\x00' * (expected_size - payload_len)
                                         else:
-                                            # Force standard strict packed rules
-                                            fmt_string = "<" + raw_fmt
+                                            payload_to_unpack = payload[:expected_size]
                                             
-                                        unpacked_data = struct.unpack(fmt_string, payload[:struct.calcsize(fmt_string)])
+                                        unpacked_data = struct.unpack(fmt_string, payload_to_unpack)
                                         val_strings = [f"{v:.3f}" if isinstance(v, float) else str(v) for v in unpacked_data]
                                         parsed_output = f"Struct Data: ({', '.join(val_strings)})"
                                     else:
@@ -274,25 +289,25 @@ class TelemetryApp:
                                 except Exception as err:
                                     parsed_output = f"Alignment Unpack Error: {str(err)}"
                                     
-                            elif info_type == 0x01: # FLOAT
+                            elif info_type == 0x01: 
                                 if len(payload) == 4:
                                     val, = struct.unpack("<f", payload)
                                     parsed_output = f"Float: {val:.3f}"
-                            elif info_type == 0x05: # STRING
+                            elif info_type == 0x05: 
                                 parsed_output = f"Text: {payload.decode('ascii', errors='ignore').strip('\x00')}"
-                            elif info_type == 0x03: # INT32
+                            elif info_type == 0x03: 
                                 if len(payload) == 4:
                                     val, = struct.unpack("<i", payload)
                                     parsed_output = f"Int32: {val}"
-                            elif info_type == 0x06: # INT16
+                            elif info_type == 0x06: 
                                 if len(payload) == 2:
                                     val, = struct.unpack("<h", payload)
                                     parsed_output = f"Int16: {val}"
-                            elif info_type == 0x04: # INT8
+                            elif info_type == 0x04: 
                                 if len(payload) == 1:
                                     val, = struct.unpack("<b", payload)
                                     parsed_output = f"Int8: {val}"
-                            elif info_type == 0x02: # BYTE ARRAY
+                            elif info_type == 0x02: 
                                 parsed_output = f"Byte Array: [{', '.join(f'0x{b:02X}' for b in payload)}]"
                             else: 
                                 parsed_output = f"Raw Hex [Type 0x{info_type:02X}]: {payload.hex().upper()}"

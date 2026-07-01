@@ -39,28 +39,106 @@ typedef struct  {
     int8_t   temperature_c;
 }battery_status_t;
 
+typedef struct {
+    double latitude;  // 8 bytes
+    double longitude; // 8 bytes
+    uint8_t satellites; // 1 byte
+} packed_gps_t;
+
+typedef struct  {
+    uint32_t uptime_seconds; // 4 bytes
+    uint16_t error_flags;    // 2 bytes
+    uint8_t  mcu_load_pct;   // 1 byte
+} packed_sys_status_t;
+
+typedef struct {
+    int8_t   flight_mode; // 1 byte (+ 3 internal padding bytes added here)
+    uint32_t checksum;    // 4 bytes
+    uint8_t  state_mask;  // 1 byte (+ 3 internal padding bytes added at the end)
+} unpacked_mixer_t;
+
+typedef struct {
+    int8_t  direction;    // 1 byte (+ 1 internal padding byte added here)
+    int16_t raw_ticks;    // 2 bytes
+    float   phase_current;// 4 bytes
+} unpacked_motor_t;
 
 imu_data_t mpu6050 = { .x = 1.02f, .y = -0.54f, .z = 9.81f };
 battery_status_t bmp280 = { .voltage_mv = 3700, .current_ma = 500, .temperature_c = 25 };
+// Handshake: "GPS:ddb" -> Expected output: (28.614, 77.209, 12)
+packed_gps_t gps_test = {
+    .latitude = 28.6139,
+    .longitude = 77.2090,
+    .satellites = 12
+};
+
+// Handshake: "SysStatus:IHB" -> Expected output: (3600, 1024, 45)
+packed_sys_status_t sys_test = {
+    .uptime_seconds = 3600,
+    .error_flags = 1024,
+    .mcu_load_pct = 45
+};
+
+// Handshake: "Motor:bhf" -> Expected output: (-1, 4500, 14.250)
+unpacked_motor_t motor_test = {
+    .direction = -1,
+    .raw_ticks = 4500,
+    .phase_current = 14.25f
+};
+
+// Handshake: "Mixer:bIB" -> Expected output: (2, 54321, 1)
+unpacked_mixer_t mixer_test = {
+    .flight_mode = 2,
+    .checksum = 54321,
+    .state_mask = 1
+};
 
 tel_information_t mysensor1 = {
-    
-    .crc = 0xFFFF,
     .data_synch = 0xAA,
     .information_type = 0x10,
-    .information_id = 0x01,
+    .information_id = 0x01, // IMU
     .information_len = sizeof(mpu6050),
     .information_buffer = &mpu6050
 };
 
 tel_information_t mysensor2 = {
-    
-    .crc = 0xFFFF,
     .data_synch = 0xAA,
     .information_type = 0x10,
-    .information_id = 0x02,
+    .information_id = 0x02, // BMP
     .information_len = sizeof(bmp280),
     .information_buffer = &bmp280
+};
+
+tel_information_t mysensor3 = {
+    .data_synch = 0xAA,
+    .information_type = 0x10,
+    .information_id = 0x03, // GPS 👈 Fix ID match
+    .information_len = sizeof(gps_test),
+    .information_buffer = &gps_test
+};
+
+tel_information_t mysensor4 = {
+    .data_synch = 0xAA,
+    .information_type = 0x10,
+    .information_id = 0x04, // SysStatus 👈 Fix ID match
+    .information_len = sizeof(sys_test),
+    .information_buffer = &sys_test
+};
+
+tel_information_t mysensor5 = {
+    .data_synch = 0xAA,
+    .information_type = 0x10,
+    .information_id = 0x05, // Motor 👈 Fix ID match
+    .information_len = sizeof(motor_test),
+    .information_buffer = &motor_test
+};
+
+tel_information_t mysensor6 = {
+    .data_synch = 0xAA,
+    .information_type = 0x10,
+    .information_id = 0x06, // Mixer 👈 Fix ID match
+    .information_len = sizeof(mixer_test),
+    .information_buffer = &mixer_test
 };
 
 tel_cmd_t imu_cmd = {
@@ -78,8 +156,32 @@ tel_cmd_t bmp_cmd = {
     .tx_buffer = (uint8_t *)"BMP:@Hhb",
     .crc = 0xFFFF
 };
+tel_cmd_t gps_cmd = {
+    .cmd_synch = 0x55,
+    .cmd_id = 0x03,
+    .tx_buffer = (uint8_t *)"GPS:@ddb",
+    .crc = 0xFFFF
+};
+tel_cmd_t sys_status_cmd = {
+    .cmd_synch = 0x55,
+    .cmd_id = 0x04,
+    .tx_buffer = (uint8_t *)"SysStatus:@IHB",
+    .crc = 0xFFFF
+};
+tel_cmd_t motor_cmd = {
+    .cmd_synch = 0x55,
+    .cmd_id = 0x05,
+    .tx_buffer = (uint8_t *)"Motor:@bhf",
+    .crc = 0xFFFF
+};
+tel_cmd_t mixer_cmd = {
+    .cmd_synch = 0x55,
+    .cmd_id = 0x06,
+    .tx_buffer = (uint8_t *)"Mixer:@bIB",
+    .crc = 0xFFFF
+};
 
-tel_cmd_t *sensor_array[2] = { &imu_cmd, &bmp_cmd };
+tel_cmd_t *sensor_array[6] = { &imu_cmd, &bmp_cmd , &gps_cmd, &sys_status_cmd, &motor_cmd, &mixer_cmd };
 
 /* USER CODE END Includes */
 
@@ -163,10 +265,10 @@ int main(void)
       // Using a short timeout (100ms) so it repeatedly checks the UART interface
       HAL_UART_Receive(&huart1, &boot_sync_signal, 1, 100);
   }
-  register_devices(sensor_array, 2);
+  register_devices(sensor_array, 6);
   
   //receive ack after this untill proceeding further
-  register_response(sensor_array, 2);
+  register_response(sensor_array, 6);
   
   /* USER CODE END 2 */
 
@@ -180,8 +282,14 @@ int main(void)
     HAL_Delay(1000);
     telemtry_custom_send(&mysensor2);
     HAL_Delay(1000);
-    mpu6050.x += 0.1f;
-    bmp280.voltage_mv += 10;
+    telemtry_custom_send(&mysensor3);
+    HAL_Delay(1000);
+    telemtry_custom_send(&mysensor4);
+    HAL_Delay(1000);
+    telemtry_custom_send(&mysensor5);
+    HAL_Delay(1000);
+    telemtry_custom_send(&mysensor6);
+    HAL_Delay(1000);
   }
   /* USER CODE END 3 */
 }
