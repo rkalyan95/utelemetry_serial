@@ -32,7 +32,7 @@ TYPE_MAP = {
 
 ALLOWED_ALIGNMENT = {"packed", "arm", "default"}
 ALLOWED_ENDIANNESS = {"little", "big"}
-BASE_FIELDS = {"id", "name", "description", "data_type", "units", "scale", "offset", "display_format"}
+BASE_FIELDS = {"id", "name", "description", "data_type", "units", "scale", "offset", "display_format", "count"}
 COMMAND_FIELDS = BASE_FIELDS.union({"ack_required", "struct_fields", "tx_buffer"})
 SENSOR_FIELDS = BASE_FIELDS.union({"default_value", "struct_fields"})
 STRUCT_FIELD_FIELDS = {"name", "data_type", "count", "units", "scale", "offset", "display_format"}
@@ -84,6 +84,9 @@ def validate_item(item, allowed_fields, is_struct_owner=False):
     for key in ["units", "display_format", "tx_buffer"]:
         if key in item and not isinstance(item[key], str):
             errors.append(f"'{key}' must be a string")
+
+    if "count" in item and (not isinstance(item["count"], int) or item["count"] < 1):
+        errors.append("'count' must be an integer >= 1")
 
     for key in ["scale", "offset"]:
         if key in item and not isinstance(item[key], (int, float)):

@@ -45,6 +45,20 @@
             { "name": "current_ma", "data_type": "int16", "units": "mA" },
             { "name": "temperature_c", "data_type": "float32", "units": "°C" }
         ]
+    },
+    {
+    "id": 5,
+    "name": "device_label",
+    "description": "Device label string",
+    "data_type": "string",
+    "default_value": "STM32-01"
+    },
+    {
+    "id": 6,
+    "name": "raw_data",
+    "description": "Raw telemetry byte payload",
+    "data_type": "bytes",
+    "count": 8
     }
   ]
 }

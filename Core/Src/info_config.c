@@ -2,24 +2,17 @@
 #include "telemtrycustom.h"
 #include <stdint.h>
 
-static float temperature_data = 24.78f;
+static float temperature_data = 0.0;
 
-static uint8_t status_flags_data = 0xA5;
+static uint8_t status_flags_data = 0;
 
-imu_reading_t imu_reading_data = {
-    .accel_x = 0.15f,
-    .accel_y = -0.03f,
-    .accel_z = 9.72f,
-    .gyro_x  = 0.18f,
-    .gyro_y  = 0.05f,
-    .gyro_z  = -0.02f
-};
+imu_reading_t imu_reading_data = {0};
 
-battery_status_t battery_status_data = {
-    .voltage_mv = 3750,
-    .current_ma = -120,
-    .temperature_c = 33.4f
-};
+battery_status_t battery_status_data = {0};
+
+static char device_label_data[9] = "STM32-01";
+
+static uint8_t raw_data_data[8] = {0};
 
 tel_information_t sensor_temperature = {
     .data_synch = TELEMTRY_ID_SYNCH,
@@ -53,6 +46,22 @@ tel_information_t sensor_battery_status = {
     .information_buffer = &battery_status_data
 };
 
+tel_information_t sensor_device_label = {
+    .data_synch = TELEMTRY_ID_SYNCH,
+    .information_type = TELEMTRY_TYPE_STRING,
+    .information_id = TELEMTRY_ID_DEVICE_LABEL,
+    .information_len = sizeof(device_label_data) - 1,
+    .information_buffer = device_label_data
+};
+
+tel_information_t sensor_raw_data = {
+    .data_synch = TELEMTRY_ID_SYNCH,
+    .information_type = TELEMTRY_TYPE_BYTES,
+    .information_id = TELEMTRY_ID_RAW_DATA,
+    .information_len = sizeof(raw_data_data),
+    .information_buffer = raw_data_data
+};
+
 tel_cmd_t cmd_temperature = {
     .cmd_synch = TELEMTRY_ID_CMD,
     .cmd_id = TELEMTRY_ID_TEMPERATURE,
@@ -81,12 +90,28 @@ tel_cmd_t cmd_battery_status = {
     .crc = 0xFFFF
 };
 
+tel_cmd_t cmd_device_label = {
+    .cmd_synch = TELEMTRY_ID_CMD,
+    .cmd_id = TELEMTRY_ID_DEVICE_LABEL,
+    .tx_buffer = (uint8_t *)"device_label",
+    .crc = 0xFFFF
+};
+
+tel_cmd_t cmd_raw_data = {
+    .cmd_synch = TELEMTRY_ID_CMD,
+    .cmd_id = TELEMTRY_ID_RAW_DATA,
+    .tx_buffer = (uint8_t *)"raw_data",
+    .crc = 0xFFFF
+};
+
 tel_cmd_t *sensor_array[TOTAL_TELEMTRY_ID-1] = {
 
     &cmd_temperature,
     &cmd_status_flags,
     &cmd_imu_reading,
     &cmd_battery_status,
+    &cmd_device_label,
+    &cmd_raw_data,
 };
 
 tel_information_t *buffers_array[TOTAL_TELEMTRY_ID-1] = {
@@ -95,4 +120,6 @@ tel_information_t *buffers_array[TOTAL_TELEMTRY_ID-1] = {
     &sensor_status_flags,
     &sensor_imu_reading,
     &sensor_battery_status,
+    &sensor_device_label,
+    &sensor_raw_data,
 };

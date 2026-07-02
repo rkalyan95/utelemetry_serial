@@ -75,6 +75,11 @@
           "type": "string",
           "description": "Optional units for display, such as 'C', 'V', or 'RPM'."
         },
+        "count": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Optional number of elements for bytes or repeated scalar fields."
+        },
         "scale": {
           "type": "number",
           "description": "Optional scale factor applied to raw sensor values."
