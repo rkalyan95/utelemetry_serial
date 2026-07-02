@@ -62,5 +62,6 @@ void telemtry_sendlen(void);
 void telemtry_sendid(void);
 void register_devices(tel_cmd_t **cmd , uint8_t number_of_devices);
 void register_response(tel_cmd_t **cmd, uint8_t number_of_devices);
-
+void telemtry_wait_for_boot_sync(void);
+uint8_t telemtry_send_boot_message(void);
 #endif /* TELEMTRY_H */

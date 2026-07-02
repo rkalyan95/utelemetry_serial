@@ -388,17 +388,29 @@ class TelemetryApp:
                             elif info_type == 0x05: 
                                 parsed_output = f"Text: {payload.decode('ascii', errors='ignore').strip('\x00')}"
                             elif info_type == 0x03: 
+                                # Interpret as signed and unsigned 32-bit
                                 if len(payload) == 4:
-                                    val, = struct.unpack("<i", payload)
-                                    parsed_output = f"Int32: {val}"
+                                    sval, = struct.unpack("<i", payload)
+                                    uval, = struct.unpack("<I", payload)
+                                    parsed_output = f"Int32: {sval} (UInt32: {uval})"
                             elif info_type == 0x06: 
+                                # Interpret as signed and unsigned 16-bit
                                 if len(payload) == 2:
-                                    val, = struct.unpack("<h", payload)
-                                    parsed_output = f"Int16: {val}"
+                                    sval, = struct.unpack("<h", payload)
+                                    uval, = struct.unpack("<H", payload)
+                                    parsed_output = f"Int16: {sval} (UInt16: {uval})"
                             elif info_type == 0x04: 
+                                # Interpret as signed and unsigned 8-bit
                                 if len(payload) == 1:
-                                    val, = struct.unpack("<b", payload)
-                                    parsed_output = f"Int8: {val}"
+                                    sval, = struct.unpack("<b", payload)
+                                    uval, = struct.unpack("<B", payload)
+                                    parsed_output = f"Int8: {sval} (UInt8: {uval})"
+                            elif info_type == 0x07:
+                                # Common alternate for 32-bit integers — show both interpretations
+                                if len(payload) == 4:
+                                    sval, = struct.unpack("<i", payload)
+                                    uval, = struct.unpack("<I", payload)
+                                    parsed_output = f"Int32/UInt32: {sval} / {uval}"
                             elif info_type == 0x02: 
                                 parsed_output = f"Byte Array: [{', '.join(f'0x{b:02X}' for b in payload)}]"
                             else: 

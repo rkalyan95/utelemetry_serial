@@ -2,24 +2,13 @@
 #include "telemtrycustom.h"
 #include <stdint.h>
 
-static float temperature_data = 24.78f;
+static float temperature_data = 0.0;
 
-static uint8_t status_flags_data = 0xA5;
+static uint8_t status_flags_data = 0;
 
-imu_reading_t imu_reading_data = {
-    .accel_x = 0.15f,
-    .accel_y = -0.03f,
-    .accel_z = 9.72f,
-    .gyro_x  = 0.18f,
-    .gyro_y  = 0.05f,
-    .gyro_z  = -0.02f
-};
+imu_reading_t imu_reading_data = {0};
 
-battery_status_t battery_status_data = {
-    .voltage_mv = 3750,
-    .current_ma = -120,
-    .temperature_c = 33.4f
-};
+battery_status_t battery_status_data = {0};
 
 tel_information_t sensor_temperature = {
     .data_synch = TELEMTRY_ID_SYNCH,

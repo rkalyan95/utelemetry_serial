@@ -40,8 +40,8 @@ void telemtry_configure(uint8_t controller_id)
     switch(controller_id)
     {
         case 1://stm32
-                register_devices(sensor_array, 9);
-                register_response(sensor_array, 9);
+                register_devices(sensor_array, TOTAL_TELEMTRY_ID-1);
+                register_response(sensor_array, TOTAL_TELEMTRY_ID-1);
                 break;
         default:
             // Handle unsupported controller IDs

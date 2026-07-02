@@ -96,14 +96,9 @@ int main(void)
   /* USER CODE BEGIN 2 */
   telemtry_init(1);//stm32 initialization
   //telemtry_custom_init(mysensor_send,mysensor_receive);
-  HAL_UART_Transmit(&huart1, (uint8_t *)"Booting up...\r\n", 14, 1000);
-  uint8_t boot_sync_signal = 0x00;
-  while(boot_sync_signal != 0xAA)
-  {
-      // Using a short timeout (100ms) so it repeatedly checks the UART interface
-      HAL_UART_Receive(&huart1, &boot_sync_signal, 1, 100);
-  }
+  telemtry_send_boot_message();
   
+  telemtry_wait_for_boot_sync();
   telemtry_configure(1);//stm32 configuration
   //receive ack after this untill proceeding further
   
@@ -116,24 +111,11 @@ int main(void)
   {
     /* USER CODE END WHILE */
     /* USER CODE BEGIN 3 */
-    telemtry_send(1, buffers_array, 0); // Send the first buffer (mysensor1)
-    HAL_Delay(1000);
-    /*telemtry_send(1, buffers_array, 1); // Send the first buffer (mysensor1)
-    HAL_Delay(1000);
-    telemtry_send(1, buffers_array, 2); // Send the first buffer (mysensor1)
-    HAL_Delay(1000);
-    telemtry_send(1, buffers_array, 3); // Send the first buffer (mysensor1)
-    HAL_Delay(1000);
-   telemtry_send(1, buffers_array, 4); // Send the first buffer (mysensor1)
-    HAL_Delay(1000);
-    telemtry_send(1, buffers_array, 5); // Send the first buffer (mysensor1)
-    HAL_Delay(1000);
-    telemtry_send(1, buffers_array, 6); // Send the first buffer (mysensor1)
-    HAL_Delay(1000);*/
-    telemtry_send(1, buffers_array, 7); // Send the first buffer (mysensor1)
-    HAL_Delay(1000);
-    telemtry_send(1, buffers_array, 8); // Send the first buffer (mysensor1)
-    HAL_Delay(1000);
+  const uint8_t buffer_count = TOTAL_TELEMTRY_ID - 1;
+  for (uint8_t idx = 0; idx < buffer_count; ++idx) {
+      telemtry_send(1, buffers_array, idx);
+      HAL_Delay(1000);
+}
   }
   /* USER CODE END 3 */
 }

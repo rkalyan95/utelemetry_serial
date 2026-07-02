@@ -56,6 +56,28 @@ void telemtry_custom_init(telemtry_custom_send_cb cb,telemtry_custom_receive_cb 
     telemtry_rx_cb = rx_cb; // Initialize receive callback to NULL
     
 }
+
+/**
+ * Send the boot message using the registered transmit callback.
+ * Returns number of bytes passed to the callback, or 0 on error (no callback).
+ */
+uint8_t telemtry_send_boot_message(void)
+{
+    static const char boot_msg[] = "Booting up...\r\n";
+    if (telemtry_cb == NULL) return 0;
+    return telemtry_cb((uint8_t *)boot_msg, (uint16_t)(sizeof(boot_msg) - 1));
+}
+
+/* Blocking wait: polls UART until sync byte 0xAA is received. */
+void telemtry_wait_for_boot_sync(void)
+{
+    uint8_t boot_sync_signal = 0x00;
+    while (boot_sync_signal != 0xAA)
+    {
+        //HAL_UART_Receive(huart, &boot_sync_signal, 1, 100);
+        telemtry_rx_cb(&boot_sync_signal, 1);
+    }
+}
 /**
  * @brief Send a telemetry packet over the registered transport.
  *
