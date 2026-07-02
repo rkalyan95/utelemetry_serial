@@ -1,10 +1,28 @@
 #include "telemtrycustom.h"
 #include "usart.h"
 #include <string.h> 
+#include "telemtry_stm32.h"
+/**
+ * @file telemtrycustom.c
+ * @brief Telemetry packet assembly and device registration helpers.
+ *
+ * This module builds and sends telemetry packets from the MCU to the Python UI,
+ * performs CRC calculation, sends registration frames, and validates
+ * registration acknowledgements from the host.
+ */
+
 tel_information_t *telemtry_information;
 tel_cmd_t *telemtry_cmd;
 telemtry_custom_send_cb telemtry_cb;
 telemtry_custom_receive_cb telemtry_rx_cb;
+/**
+ * @brief Update a CRC-16 value over a byte buffer.
+ *
+ * @param crc_seed Initial CRC seed value.
+ * @param data Pointer to the buffer to checksum.
+ * @param length Number of bytes to process.
+ * @return Updated CRC-16 value after processing the buffer.
+ */
 uint16_t telemtry_update_crc16(uint16_t crc_seed, const uint8_t *data, uint16_t length)
 {
     uint16_t crc = crc_seed;
@@ -20,9 +38,16 @@ uint16_t telemtry_update_crc16(uint16_t crc_seed, const uint8_t *data, uint16_t 
     return crc;
 }
 
-void telemtry_custom_init(tel_information_t *info,telemtry_custom_send_cb cb,telemtry_custom_receive_cb rx_cb)
+/**
+ * @brief Initialize the telemetry layer callbacks.
+ *
+ * @param info Pointer to a telemetry information descriptor.
+ * @param cb Transmit callback used to send bytes over UART.
+ * @param rx_cb Receive callback used to read bytes from UART.
+ */
+void telemtry_custom_init(telemtry_custom_send_cb cb,telemtry_custom_receive_cb rx_cb)
 {
-    if(info == NULL || cb == NULL)
+    if( cb == NULL || rx_cb == NULL)
     {
         return;
     }
@@ -31,6 +56,14 @@ void telemtry_custom_init(tel_information_t *info,telemtry_custom_send_cb cb,tel
     telemtry_rx_cb = rx_cb; // Initialize receive callback to NULL
     
 }
+/**
+ * @brief Send a telemetry packet over the registered transport.
+ *
+ * The packet format is:
+ *   [0xAA] [type] [id] [len] [payload...] [crc_lo] [crc_hi]
+ *
+ * @param serial_telemetry Pointer to the telemetry descriptor.
+ */
 void telemtry_custom_send(tel_information_t *serial_telemetry)
 {
     if (serial_telemetry == NULL || telemtry_cb == NULL)
@@ -71,6 +104,11 @@ void telemtry_custom_send(tel_information_t *serial_telemetry)
     telemtry_cb((uint8_t *)&telemtry_information->crc, 2);
 }
 
+/**
+ * @brief Send only the telemetry sync byte.
+ *
+ * This can be used to indicate a packet boundary or to keep the link alive.
+ */
 void telemtry_sendsync(void)
 {
     if(telemtry_information == NULL || telemtry_cb == NULL)
@@ -80,6 +118,9 @@ void telemtry_sendsync(void)
     telemtry_cb(&telemtry_information->data_synch, 1);
 }
 
+/**
+ * @brief Send only the telemetry packet length byte.
+ */
 void telemtry_sendlen(void)
 {
     if(telemtry_information == NULL || telemtry_cb == NULL)
@@ -89,6 +130,9 @@ void telemtry_sendlen(void)
     telemtry_cb(&telemtry_information->information_len, 1);
 }
 
+/**
+ * @brief Send only the telemetry packet ID byte.
+ */
 void telemtry_sendid(void)
 {
     if(telemtry_information == NULL || telemtry_cb == NULL)
@@ -101,6 +145,9 @@ void telemtry_sendid(void)
 
 
 
+/**
+ * @brief Send only the telemetry packet CRC.
+ */
 void telemtry_sendcrc(void)
 {
     if(telemtry_information == NULL || telemtry_cb == NULL)
@@ -110,6 +157,15 @@ void telemtry_sendcrc(void)
     telemtry_cb((uint8_t *)&telemtry_information->crc, 2);
 }
 
+/**
+ * @brief Register devices by sending their handshake commands.
+ *
+ * Each registration frame includes the command sync byte, command id,
+ * command text, and CRC followed by CR/LF.
+ *
+ * @param cmd Array of device command descriptors.
+ * @param number_of_devices Number of descriptors in the array.
+ */
 void register_devices(tel_cmd_t **cmd , uint8_t number_of_devices)
 {
     if(*cmd == NULL)
@@ -147,6 +203,15 @@ void register_devices(tel_cmd_t **cmd , uint8_t number_of_devices)
 
 //it will check the received crc from python ui and compare 
 //to validate the device registration
+/**
+ * @brief Receive and validate registration CRC acknowledgements.
+ *
+ * Reads two bytes from the receive callback for each device and compares
+ * them against the previously computed registration CRC.
+ *
+ * @param cmd Array of device command descriptors.
+ * @param number_of_devices Number of descriptors in the array.
+ */
 void register_response(tel_cmd_t **cmd, uint8_t number_of_devices)
 {
 

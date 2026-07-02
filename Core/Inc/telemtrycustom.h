@@ -33,9 +33,29 @@ typedef struct
    uint16_t crc;
 }tel_cmd_t;
 
+typedef enum
+{
+    TELEMTRY_TYPE_FLOAT = 0x01,
+    TELEMTRY_TYPE_BYTES = 0x02,
+    TELEMTRY_TYPE_INT32   = 0x03,
+    TELEMTRY_TYPE_INT8    = 0x04,
+    TELEMTRY_TYPE_STRING = 0x05,
+    TELEMTRY_TYPE_INT16    = 0x06,
+    TELEMTRY_TYPE_STRUCT  = 0x10,
+    /* Invalid beyond this */
+    TELEMTRY_TYPE_INVALID = 0xFF
+}telemtry_type_t;
+
+typedef enum
+{
+    TELEMTRY_ID_SYNCH = 0xAA,
+    TELEMTRY_ID_CMD = 0x55,
+}telemtry_id_t;
+
+
 extern tel_information_t *telemtry_information;
 extern tel_cmd_t *telemtry_cmd;
-void telemtry_custom_init(tel_information_t *info,telemtry_custom_send_cb cb,telemtry_custom_receive_cb rx_cb);
+void telemtry_custom_init(telemtry_custom_send_cb cb,telemtry_custom_receive_cb rx_cb);
 void telemtry_custom_send(tel_information_t *serial_telemetry);
 void telemtry_sendsync(void);
 void telemtry_sendlen(void);

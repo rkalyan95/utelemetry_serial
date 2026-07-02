@@ -38,6 +38,8 @@ BUILD_DIR = build
 C_SOURCES =  \
 Core/Src/main.c \
 Core/Src/telemtrycustom.c \
+Core/Src/telemtry_stm32.c \
+Core/Src/info_config.c \
 Core/Src/gpio.c \
 Core/Src/usart.c \
 Core/Src/stm32l4xx_it.c \
