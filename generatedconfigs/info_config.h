@@ -15,6 +15,8 @@ enum
     TELEMTRY_ID_BATTERY_STATUS = 0x04,
     TELEMTRY_ID_DEVICE_LABEL = 0x05,
     TELEMTRY_ID_RAW_DATA = 0x06,
+    TELEMTRY_ID_MOTOR = 0x07,
+    TELEMTRY_ID_TEST_STRING = 0x08,
     /* Add only above this line */
     TOTAL_TELEMTRY_ID,
 };
@@ -33,6 +35,21 @@ typedef struct {
     int16_t current_ma;
     float temperature_c;
 } battery_status_t;
+
+typedef struct {
+    uint8_t motor_1;
+    float motor_2;
+    int32_t motor_3;
+    uint8_t motor_4[1];
+} motor_t;
+
+typedef struct {
+    float first;
+    uint16_t second;
+    int16_t third;
+    uint8_t fourth[1];
+    char fifth[1];
+} test_string_t;
 
 
 extern tel_cmd_t *sensor_array[TOTAL_TELEMTRY_ID-1];

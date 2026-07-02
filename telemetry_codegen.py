@@ -304,7 +304,9 @@ def render_info_source(config, header_name="info_config.h"):
             return "i"
         if data_type == "uint32":
             return "I"
-        if data_type in ("string", "bytes"):
+        if data_type == "string":
+            return f"{count}S"
+        if data_type == "bytes":
             return f"{count}s"
         return "B"
 

@@ -272,8 +272,9 @@ class TelemetryApp:
                                     if raw_fmt != "None":
                                         mode = self.alignment_var.get()
                                         fmt_string = "@" + raw_fmt if mode == "32-bit ARM (Cortex-M)" else "<" + raw_fmt
+                                        python_fmt = fmt_string.replace('S', 's')
                                             
-                                        expected_size = struct.calcsize(fmt_string)
+                                        expected_size = struct.calcsize(python_fmt)
                                         payload_len = len(payload)
                                         
                                         if payload_len < expected_size:
@@ -281,8 +282,19 @@ class TelemetryApp:
                                         else:
                                             payload_to_unpack = payload[:expected_size]
                                             
-                                        unpacked_data = struct.unpack(fmt_string, payload_to_unpack)
-                                        val_strings = [f"{v:.3f}" if isinstance(v, float) else str(v) for v in unpacked_data]
+                                        unpacked_data = struct.unpack(python_fmt, payload_to_unpack)
+                                        val_strings = []
+                                        fmt_chars = [c for c in raw_fmt if c.isalpha() or c == 's' or c == 'S']
+                                        for fmt, v in zip(fmt_chars, unpacked_data):
+                                            if fmt == 'S':
+                                                text = v.decode('ascii', errors='ignore').rstrip('\x00')
+                                                val_strings.append(f'"{text}"')
+                                            elif fmt == 's':
+                                                val_strings.append("[" + ", ".join(f"0x{b:02X}" for b in v) + "]")
+                                            elif isinstance(v, float):
+                                                val_strings.append(f"{v:.3f}")
+                                            else:
+                                                val_strings.append(str(v))
                                         parsed_output = f"Struct Data: ({', '.join(val_strings)})"
                                     else:
                                         parsed_output = f"Unregistered Struct Data Hex: {payload.hex().upper()}"

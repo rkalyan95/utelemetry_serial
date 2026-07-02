@@ -14,6 +14,10 @@ static char device_label_data[9] = "STM32-01";
 
 static uint8_t raw_data_data[8] = {0};
 
+motor_t motor_data = {0};
+
+test_string_t test_string_data = {0};
+
 tel_information_t sensor_temperature = {
     .data_synch = TELEMTRY_ID_SYNCH,
     .information_type = TELEMTRY_TYPE_FLOAT,
@@ -62,6 +66,22 @@ tel_information_t sensor_raw_data = {
     .information_buffer = raw_data_data
 };
 
+tel_information_t sensor_motor = {
+    .data_synch = TELEMTRY_ID_SYNCH,
+    .information_type = TELEMTRY_TYPE_STRUCT,
+    .information_id = TELEMTRY_ID_MOTOR,
+    .information_len = sizeof(motor_data),
+    .information_buffer = &motor_data
+};
+
+tel_information_t sensor_test_string = {
+    .data_synch = TELEMTRY_ID_SYNCH,
+    .information_type = TELEMTRY_TYPE_STRUCT,
+    .information_id = TELEMTRY_ID_TEST_STRING,
+    .information_len = sizeof(test_string_data),
+    .information_buffer = &test_string_data
+};
+
 tel_cmd_t cmd_temperature = {
     .cmd_synch = TELEMTRY_ID_CMD,
     .cmd_id = TELEMTRY_ID_TEMPERATURE,
@@ -104,6 +124,20 @@ tel_cmd_t cmd_raw_data = {
     .crc = 0xFFFF
 };
 
+tel_cmd_t cmd_motor = {
+    .cmd_synch = TELEMTRY_ID_CMD,
+    .cmd_id = TELEMTRY_ID_MOTOR,
+    .tx_buffer = (uint8_t *)"motor:@Bfi1s",
+    .crc = 0xFFFF
+};
+
+tel_cmd_t cmd_test_string = {
+    .cmd_synch = TELEMTRY_ID_CMD,
+    .cmd_id = TELEMTRY_ID_TEST_STRING,
+    .tx_buffer = (uint8_t *)"test_string:@fHh1s1S",
+    .crc = 0xFFFF
+};
+
 tel_cmd_t *sensor_array[TOTAL_TELEMTRY_ID-1] = {
 
     &cmd_temperature,
@@ -112,6 +146,8 @@ tel_cmd_t *sensor_array[TOTAL_TELEMTRY_ID-1] = {
     &cmd_battery_status,
     &cmd_device_label,
     &cmd_raw_data,
+    &cmd_motor,
+    &cmd_test_string,
 };
 
 tel_information_t *buffers_array[TOTAL_TELEMTRY_ID-1] = {
@@ -122,4 +158,6 @@ tel_information_t *buffers_array[TOTAL_TELEMTRY_ID-1] = {
     &sensor_battery_status,
     &sensor_device_label,
     &sensor_raw_data,
+    &sensor_motor,
+    &sensor_test_string,
 };
