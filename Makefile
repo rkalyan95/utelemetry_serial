@@ -37,10 +37,10 @@ BUILD_DIR = build
 # C sources
 C_SOURCES =  \
 Core/Src/main.c \
-Core/Src/telemtrycustom.c \
-Core/Src/telemtry_transport.c \
-Core/Src/info_config.c \
-Core/Src/telemtry_hw.c \
+telemtry_lib/Src/telemtrycustom.c \
+telemtry_lib/Src/telemtry_transport.c \
+telemtry_lib/Src/info_config.c \
+telemtry_lib/Src/telemtry_hw_stm32.c \
 Core/Src/gpio.c \
 Core/Src/usart.c \
 Core/Src/stm32l4xx_it.c \
@@ -126,6 +126,7 @@ AS_INCLUDES =
 # C includes
 C_INCLUDES =  \
 -ICore/Inc \
+-Itelemtry_lib/Inc \
 -IDrivers/STM32L4xx_HAL_Driver/Inc \
 -IDrivers/STM32L4xx_HAL_Driver/Inc/Legacy \
 -IDrivers/CMSIS/Device/ST/STM32L4xx/Include \

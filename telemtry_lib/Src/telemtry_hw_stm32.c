@@ -4,11 +4,9 @@
 
 #include <string.h>
 
+
 bool telemtry_hw_init(void)
 {
-    // Initialize the UART hardware or other transport here.
-    // This file is intentionally platform-specific.
-    // Return true when the transport is ready.
     MX_USART1_UART_Init();
     return true;
 }

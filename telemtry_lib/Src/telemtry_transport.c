@@ -14,7 +14,7 @@
 void telemtry_init(void)
 {
     telemtry_hw_init();
-    telemtry_custom_init(telemtry_hw_send, telemtry_hw_receive);
+    telemtry_init_callback(telemtry_hw_send, telemtry_hw_receive);
 }
 
 void telemtry_configure(void)

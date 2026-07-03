@@ -90,17 +90,14 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  //MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
-  telemtry_init();//stm32 initialization
-  //telemtry_custom_init(mysensor_send,mysensor_receive);
+  telemtry_init();
+
   telemtry_send_boot_message();
   
   telemtry_wait_for_boot_sync();
-  telemtry_configure();//stm32 configuration
-  //receive ack after this untill proceeding further
-  
-  
+  telemtry_configure();
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -110,8 +107,8 @@ int main(void)
   {
     /* USER CODE END WHILE */
     /* USER CODE BEGIN 3 */
-  const uint8_t buffer_count = TOTAL_TELEMTRY_ID - 1;
-  for (uint8_t idx = 0; idx < buffer_count; ++idx) {
+  
+  for (uint8_t idx = 0; idx < (TOTAL_TELEMTRY_ID - 1); ++idx) {
 
       telemtry_send(buffers_array, idx);
       HAL_Delay(1000);

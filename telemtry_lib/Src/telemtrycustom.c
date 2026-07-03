@@ -45,7 +45,7 @@ uint16_t telemtry_update_crc16(uint16_t crc_seed, const uint8_t *data, uint16_t 
  * @param cb Transmit callback used to send bytes over UART.
  * @param rx_cb Receive callback used to read bytes from UART.
  */
-void telemtry_custom_init(telemtry_custom_send_cb cb,telemtry_custom_receive_cb rx_cb)
+void telemtry_init_callback(telemtry_custom_send_cb cb,telemtry_custom_receive_cb rx_cb)
 {
     if( cb == NULL || rx_cb == NULL)
     {
@@ -74,7 +74,6 @@ void telemtry_wait_for_boot_sync(void)
     uint8_t boot_sync_signal = 0x00;
     while (boot_sync_signal != 0xAA)
     {
-        //HAL_UART_Receive(huart, &boot_sync_signal, 1, 100);
         telemtry_rx_cb(&boot_sync_signal, 1);
     }
 }

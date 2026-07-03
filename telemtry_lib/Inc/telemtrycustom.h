@@ -55,7 +55,7 @@ typedef enum
 
 extern tel_information_t *telemtry_information;
 extern tel_cmd_t *telemtry_cmd;
-void telemtry_custom_init(telemtry_custom_send_cb cb,telemtry_custom_receive_cb rx_cb);
+void telemtry_init_callback(telemtry_custom_send_cb cb,telemtry_custom_receive_cb rx_cb);
 void telemtry_custom_send(tel_information_t *serial_telemetry);
 void telemtry_sendsync(void);
 void telemtry_sendlen(void);

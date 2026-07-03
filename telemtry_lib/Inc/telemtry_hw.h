@@ -8,6 +8,7 @@
 extern "C" {
 #endif
 
+
 /**
  * @brief Initialize the transport hardware for telemetry.
  *
