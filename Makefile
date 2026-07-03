@@ -40,7 +40,7 @@ Core/Src/main.c \
 telemtry_lib/Src/telemtrycustom.c \
 telemtry_lib/Src/telemtry_transport.c \
 telemtry_lib/Src/info_config.c \
-telemtry_lib/Src/telemtry_hw_stm32.c \
+telemtry_lib/Src/hw/telemtry_hw_stm32.c \
 Core/Src/gpio.c \
 Core/Src/usart.c \
 Core/Src/stm32l4xx_it.c \

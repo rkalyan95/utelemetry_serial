@@ -24,7 +24,7 @@ bool telemtry_hw_init(void);
  * @param len Number of bytes to send.
  * @return number of bytes transmitted, or 0 on error.
  */
-uint8_t telemtry_hw_send(const uint8_t *data, uint16_t len);
+uint8_t telemtry_hw_send(uint8_t *data, uint16_t len);
 
 /**
  * @brief Receive bytes from the telemetry transport.

@@ -118,7 +118,7 @@ void telemtry_custom_send(tel_information_t *serial_telemetry)
     // Payload Data
     if (telemtry_information->information_buffer != NULL && telemtry_information->information_len > 0)
     {
-        telemtry_cb((const uint8_t *)telemtry_information->information_buffer, telemtry_information->information_len);
+        telemtry_cb((uint8_t *)telemtry_information->information_buffer, telemtry_information->information_len);
     }
     
     // CRC (2 Bytes)
@@ -204,14 +204,14 @@ void register_devices(tel_cmd_t **cmd , uint8_t number_of_devices)
         crc = telemtry_update_crc16(crc, &cmd[i]->cmd_id, 1);
         if(cmd[i]->tx_buffer != NULL)
         {
-            crc = telemtry_update_crc16(crc, cmd[i]->tx_buffer, strlen(cmd[i]->tx_buffer));
+            crc = telemtry_update_crc16(crc, cmd[i]->tx_buffer, strlen((const char *)cmd[i]->tx_buffer));
         }
         cmd[i]->crc = crc;
         telemtry_cb(&cmd[i]->cmd_synch, 1);
         telemtry_cb(&cmd[i]->cmd_id, 1);
         if(cmd[i]->tx_buffer != NULL)
         {
-            telemtry_cb(cmd[i]->tx_buffer, strlen(cmd[i]->tx_buffer));
+            telemtry_cb(cmd[i]->tx_buffer, strlen((const char *)cmd[i]->tx_buffer));
         }
         telemtry_cb((uint8_t *)&cmd[i]->crc, 2);
         //send delimiter for each device registration

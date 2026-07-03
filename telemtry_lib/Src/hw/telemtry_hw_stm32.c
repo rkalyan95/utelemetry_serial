@@ -11,7 +11,7 @@ bool telemtry_hw_init(void)
     return true;
 }
 
-uint8_t telemtry_hw_send(const uint8_t *data, uint16_t len)
+uint8_t telemtry_hw_send(uint8_t *data, uint16_t len)
 {
     if (data == NULL || len == 0)
     {
