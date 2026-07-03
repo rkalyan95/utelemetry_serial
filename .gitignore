@@ -5,6 +5,8 @@ bin/
 obj/
 out/
 dist/
+Core/
+Drivers/
 
 # Makefile generated files
 *.o
@@ -16,6 +18,10 @@ dist/
 *.lst
 *.txt
 *.pyc
+*.ioc
+*.s
+*.ld
+*.mxproject
 
 # CMake generated files
 CMakeCache.txt
