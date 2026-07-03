@@ -325,11 +325,26 @@ def render_info_source(config, header_name="info_config.h"):
     def make_item_name(item, prefix):
         return f"{prefix}_{normalize_identifier(item['name'])}"
 
+    def render_struct_payload(item, name):
+        struct_name = f"{normalize_identifier(item['name'])}_t"
+        initializers = []
+        for field in item["struct_fields"]:
+            field_type = field["data_type"]
+            if field_type == "string":
+                default_value = field.get("default_value", "")
+                escaped = escape_c_string(str(default_value))
+                initializers.append(f'"{escaped}"')
+            elif field_type == "bytes":
+                initializers.append("{0}")
+            else:
+                initializers.append("0")
+        initializer_list = ", ".join(initializers)
+        return f"{struct_name} {name} = {{ {initializer_list} }};\n"
+
     for item in sensors:
         name = make_payload_name(item)
         if item["data_type"] == "struct":
-            struct_name = f"{normalize_identifier(item['name'])}_t"
-            parts.append(f"{struct_name} {name} = {{0}};\n")
+            parts.append(render_struct_payload(item, name))
         elif item["data_type"] == "string":
             default_value = item.get("default_value", "")
             escaped = escape_c_string(str(default_value))

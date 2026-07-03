@@ -17,6 +17,8 @@ enum
     TELEMTRY_ID_RAW_DATA = 0x06,
     TELEMTRY_ID_MOTOR = 0x07,
     TELEMTRY_ID_TEST_STRING = 0x08,
+    TELEMTRY_ID_TEST_FINAL = 0x09,
+    TELEMTRY_ID_TEST_STRINGS = 0x0A,
     /* Add only above this line */
     TOTAL_TELEMTRY_ID,
 };
@@ -50,6 +52,19 @@ typedef struct {
     uint8_t fourth[1];
     char fifth[1];
 } test_string_t;
+
+typedef struct {
+    float fil_1;
+    int16_t fil_2;
+    uint8_t fil_3[4];
+} test_final_t;
+
+typedef struct {
+    uint32_t value1;
+    float value2;
+    char value3[17];
+    uint8_t value4[5];
+} test_strings_t;
 
 
 extern tel_cmd_t *sensor_array[TOTAL_TELEMTRY_ID-1];

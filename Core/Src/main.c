@@ -22,12 +22,10 @@
 #include "gpio.h"
 #include "telemtrycustom.h"
 #include "info_config.h"
-#include "telemtry_stm32.h"
+#include "telemtry_transport.h"
 #include <string.h>
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-float sensor_1 = 123.456;
-float sensor_2 = 789.012;
 
 /* USER CODE END Includes */
 
@@ -92,14 +90,14 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_USART1_UART_Init();
+  //MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
-  telemtry_init(1);//stm32 initialization
+  telemtry_init();//stm32 initialization
   //telemtry_custom_init(mysensor_send,mysensor_receive);
   telemtry_send_boot_message();
   
   telemtry_wait_for_boot_sync();
-  telemtry_configure(1);//stm32 configuration
+  telemtry_configure();//stm32 configuration
   //receive ack after this untill proceeding further
   
   
@@ -107,17 +105,20 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  
   while (1)
   {
     /* USER CODE END WHILE */
     /* USER CODE BEGIN 3 */
   const uint8_t buffer_count = TOTAL_TELEMTRY_ID - 1;
   for (uint8_t idx = 0; idx < buffer_count; ++idx) {
-      telemtry_send(1, buffers_array, idx);
+
+      telemtry_send(buffers_array, idx);
       HAL_Delay(1000);
-}
+
   }
   /* USER CODE END 3 */
+}
 }
 
 /**

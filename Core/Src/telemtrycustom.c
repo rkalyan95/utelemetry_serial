@@ -1,7 +1,7 @@
 #include "telemtrycustom.h"
 #include "usart.h"
 #include <string.h> 
-#include "telemtry_stm32.h"
+#include "telemtry_transport.h"
 /**
  * @file telemtrycustom.c
  * @brief Telemetry packet assembly and device registration helpers.

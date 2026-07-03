@@ -1,9 +1,25 @@
+import importlib.util
+import json
+import os
+import sys
+import traceback
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, filedialog, messagebox, simpledialog
 import serial
 import struct
+import subprocess
 import threading
 import time
+
+CODEGEN_SCRIPT = os.path.join(os.path.dirname(__file__), "telemetry_codegen.py")
+
+try:
+    import generatefiles.telemetry_config_ui as config_ui
+except ImportError:
+    config_ui_path = os.path.join(os.path.dirname(__file__), "generatefiles", "telemetry_config_ui.py")
+    spec = importlib.util.spec_from_file_location("telemetry_config_ui", config_ui_path)
+    config_ui = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(config_ui)
 
 def calculate_crc16(data: bytes) -> int:
     crc = 0xFFFF
@@ -17,15 +33,23 @@ def calculate_crc16(data: bytes) -> int:
 class TelemetryApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("Dual-Console Telemetry Debugger")
-        self.root.geometry("1100x700")
-        
-        self.device_registry = {}  
+        self.root.title("Telemetry Monitor & Config")
+        self.root.geometry("1180x760")
+
+        self.style = ttk.Style(self.root)
+        try:
+            self.style.theme_use("clam")
+        except Exception:
+            pass
+        self.root.option_add("*Font", ("Segoe UI", 9))
+        self.device_registry = {}
         self.ser = None
         self.serial_connected = False
         self.handshake_done = False
         self.kill_listen_thread = False
-        self.listen_thread = None  
+        self.listen_thread = None
+        self.config_data = None
+        self.config_path = None
 
         self.create_widgets()
         self.attempt_serial_connection()
@@ -41,7 +65,10 @@ class TelemetryApp:
         self.btn_restart = ttk.Button(input_frame, text="🔄 Restart & Sync Loop", command=self.restart_and_sync)
         self.btn_restart.grid(row=0, column=1, padx=5, pady=5)
 
-        ttk.Label(input_frame, text="Struct Alignment Mode:").grid(row=0, column=2, padx=(20, 5), pady=5)
+        self.btn_generate = ttk.Button(input_frame, text="📄 Generate C Files", command=self.generate_config_files)
+        self.btn_generate.grid(row=0, column=2, padx=5, pady=5)
+
+        ttk.Label(input_frame, text="Struct Alignment Mode:").grid(row=0, column=3, padx=(20, 5), pady=5)
         self.alignment_var = tk.StringVar(value="32-bit ARM (Cortex-M)")
         self.combo_alignment = ttk.Combobox(
             input_frame, 
@@ -50,10 +77,33 @@ class TelemetryApp:
             state="readonly",
             width=24
         )
-        self.combo_alignment.grid(row=0, column=3, padx=5, pady=5)
+        self.combo_alignment.grid(row=0, column=4, padx=5, pady=5)
 
-        self.status_label = ttk.Label(self.root, text="Initializing...", font=("Arial", 10, "bold"))
+        button_frame = ttk.Frame(input_frame)
+        button_frame.grid(row=1, column=0, columnspan=5, pady=(8, 0), sticky="w")
+
+        ttk.Button(button_frame, text="📂 Load JSON", command=self.load_json).grid(row=0, column=0, padx=3, pady=2)
+        ttk.Button(button_frame, text="💾 Save JSON", command=self.save_json).grid(row=0, column=1, padx=3, pady=2)
+        ttk.Button(button_frame, text="➕ Add Sensor", command=self.add_sensor).grid(row=0, column=2, padx=3, pady=2)
+        ttk.Button(button_frame, text="✏️ Edit Sensor", command=self.edit_sensor).grid(row=0, column=3, padx=3, pady=2)
+        ttk.Button(button_frame, text="🗑 Remove Sensor", command=self.remove_sensor).grid(row=0, column=4, padx=3, pady=2)
+        ttk.Button(button_frame, text="🧹 Clear Screen", command=self.clear_screen).grid(row=0, column=5, padx=3, pady=2)
+
+        self.config_label = tk.Label(input_frame, text="Config: none", fg="#333")
+        self.config_label.grid(row=2, column=0, columnspan=5, sticky="w", pady=(10,0))
+
+        self.status_var = tk.StringVar(value="Ready")
+        self.status_label = ttk.Label(self.root, text="Initializing...", font=("Segoe UI", 10, "bold"))
         self.status_label.pack(anchor="w", padx=15, pady=2)
+
+        config_frame = ttk.LabelFrame(self.root, text=" Telemetry Config Editor ", padding=10)
+        config_frame.pack(fill="x", padx=15, pady=5)
+
+        self.sensor_list = tk.Listbox(config_frame, height=5, selectmode="browse")
+        self.sensor_list.pack(fill="both", expand=True, side="left")
+        sensor_scroll = ttk.Scrollbar(config_frame, command=self.sensor_list.yview)
+        sensor_scroll.pack(side="right", fill="y")
+        self.sensor_list.configure(yscrollcommand=sensor_scroll.set)
 
         # Device Registration Grid
         table_frame = ttk.LabelFrame(self.root, text=" Devices Registered by Controller ", padding=10)
@@ -95,6 +145,13 @@ class TelemetryApp:
         right_scroll.pack(fill="y", side="right")
         self.raw_text.config(yscrollcommand=right_scroll.set)
 
+        self.status_bar = ttk.Label(self.root, textvariable=self.status_var, relief="sunken", anchor="w", padding=(6,4))
+        self.status_bar.pack(fill="x", padx=15, pady=(0,5))
+
+    def update_status(self, message, color="black"):
+        self.status_label.config(text=message, foreground=color)
+        self.status_var.set(message)
+
     def log_message(self, message):
         self.log_text.insert(tk.END, message + "\n")
         self.log_text.see(tk.END)
@@ -107,6 +164,143 @@ class TelemetryApp:
         
         self.raw_text.insert(tk.END, f"[{timestamp}] HEX: {hex_dump}\n             ASCII: {ascii_dump}\n")
         self.raw_text.see(tk.END)
+
+    def generate_config_files(self):
+        if self.config_data:
+            config = self.config_data
+        else:
+            config_path = filedialog.askopenfilename(
+                title="Select telemetry config JSON",
+                filetypes=[("JSON files", "*.json"), ("All files", "*")]
+            )
+            if not config_path:
+                return
+            try:
+                with open(config_path, "r", encoding="utf-8") as handle:
+                    config = json.load(handle)
+            except Exception as exc:
+                messagebox.showerror("Load error", f"Unable to load config:\n{exc}")
+                return
+
+        out_dir = filedialog.askdirectory(
+            title="Select output directory for generated files"
+        )
+        if not out_dir:
+            out_dir = os.path.join(os.path.dirname(__file__), "generatedconfigs")
+
+        try:
+            os.makedirs(out_dir, exist_ok=True)
+        except Exception as exc:
+            messagebox.showerror("Output Error", f"Unable to create output directory:\n{exc}")
+            return
+
+        if not os.path.exists(CODEGEN_SCRIPT):
+            messagebox.showerror("Generator Missing", f"Cannot find telemetry generator:\n{CODEGEN_SCRIPT}")
+            return
+
+        try:
+            spec = importlib.util.spec_from_file_location("telemetry_codegen", CODEGEN_SCRIPT)
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            header_path, source_path = module.generate_files(config, out_dir)
+            messagebox.showinfo("Generation Complete", f"Generated:\n{header_path}\n{source_path}")
+            self.update_status("Generated C files successfully.", "green")
+        except Exception as exc:
+            tb = traceback.format_exc()
+            messagebox.showerror("Generation Failed", f"{exc}\n\n{tb}")
+            self.update_status("Generation failed.", "red")
+
+    def clear_screen(self):
+        self.log_text.delete("1.0", tk.END)
+        self.raw_text.delete("1.0", tk.END)
+
+    def refresh_sensor_list(self):
+        self.sensor_list.delete(0, tk.END)
+        if not self.config_data:
+            return
+        for sensor in self.config_data.get("sensors", []):
+            display = f"{sensor['id']}: {sensor['name']} ({sensor['data_type']})"
+            if sensor.get("description"):
+                display += f" - {sensor['description']}"
+            self.sensor_list.insert(tk.END, display)
+
+    def load_json(self):
+        path = filedialog.askopenfilename(
+            title="Open telemetry JSON",
+            filetypes=[("JSON files", "*.json"), ("All files", "*")]
+        )
+        if not path:
+            return
+        try:
+            with open(path, "r", encoding="utf-8") as handle:
+                self.config_data = json.load(handle)
+        except Exception as exc:
+            messagebox.showerror("Load error", f"Unable to load config:\n{exc}")
+            return
+        self.config_path = path
+        self.config_label.config(text=f"Config: {os.path.basename(path)}")
+        self.refresh_sensor_list()
+        self.update_status(f"Loaded config: {os.path.basename(path)}", "green")
+
+    def save_json(self):
+        if not self.config_data:
+            messagebox.showwarning("No config", "Load or create a telemetry configuration first.")
+            return False
+        path = filedialog.asksaveasfilename(
+            title="Save telemetry JSON",
+            defaultextension=".json",
+            filetypes=[("JSON files", "*.json")],
+            initialfile=os.path.basename(self.config_path or "telemetry_config.json"),
+            initialdir=os.path.dirname(self.config_path or os.getcwd())
+        )
+        if not path:
+            return False
+        try:
+            with open(path, "w", encoding="utf-8") as handle:
+                json.dump(self.config_data, handle, indent=2)
+                handle.write("\n")
+        except Exception as exc:
+            messagebox.showerror("Save error", f"Unable to save config:\n{exc}")
+            return False
+        self.config_path = path
+        self.config_label.config(text=f"Config: {os.path.basename(path)}")
+        messagebox.showinfo("Saved", f"Configuration saved to {path}")
+        self.update_status(f"Saved config: {os.path.basename(path)}", "green")
+        return True
+
+    def add_sensor(self):
+        editor = config_ui.SensorEditor(self.root, "Add sensor")
+        if editor.result:
+            self.config_data = self.config_data or {}
+            self.config_data.setdefault("sensors", []).append(editor.result)
+            self.refresh_sensor_list()
+
+    def edit_sensor(self):
+        if not self.config_data:
+            messagebox.showwarning("No config", "Load a configuration before editing.")
+            return
+        selection = self.sensor_list.curselection()
+        if not selection:
+            messagebox.showwarning("Select sensor", "Choose a sensor to edit.")
+            return
+        index = selection[0]
+        sensor = self.config_data["sensors"][index]
+        editor = config_ui.SensorEditor(self.root, "Edit sensor", sensor=sensor)
+        if editor.result:
+            self.config_data["sensors"][index] = editor.result
+            self.refresh_sensor_list()
+
+    def remove_sensor(self):
+        if not self.config_data:
+            messagebox.showwarning("No config", "Load a configuration before editing.")
+            return
+        selection = self.sensor_list.curselection()
+        if not selection:
+            messagebox.showwarning("Select sensor", "Choose a sensor to remove.")
+            return
+        index = selection[0]
+        del self.config_data["sensors"][index]
+        self.refresh_sensor_list()
 
     def attempt_serial_connection(self):
         port_target = 'COM12'

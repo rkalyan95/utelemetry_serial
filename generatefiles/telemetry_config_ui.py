@@ -217,27 +217,71 @@ class StructFieldDialog(simpledialog.Dialog):
 
         tk.Label(master, text="Data type:").grid(row=1, column=0, sticky="w", padx=4, pady=2)
         self.dtype_var = tk.StringVar(value=self.field.get("data_type", "uint8"))
-        tk.OptionMenu(master, self.dtype_var, *DATA_TYPES).grid(row=1, column=1, sticky="ew", padx=4, pady=2)
+        tk.OptionMenu(master, self.dtype_var, *DATA_TYPES, command=self.refresh).grid(row=1, column=1, sticky="ew", padx=4, pady=2)
 
         tk.Label(master, text="Count:").grid(row=2, column=0, sticky="w", padx=4, pady=2)
         self.count_entry = tk.Entry(master)
         self.count_entry.grid(row=2, column=1, sticky="ew", padx=4, pady=2)
         self.count_entry.insert(0, str(self.field.get("count", "")))
 
+        self.default_label = tk.Label(master, text="Default value:")
+        self.default_label.grid(row=3, column=0, sticky="w", padx=4, pady=2)
+        self.default_entry = tk.Entry(master)
+        self.default_entry.grid(row=3, column=1, sticky="ew", padx=4, pady=2)
+        self.default_entry.insert(0, str(self.field.get("default_value", "")))
+        self.default_entry.bind("<KeyRelease>", self.on_default_value_change)
+
         master.grid_columnconfigure(1, weight=1)
+        self.refresh()
         return self.name_entry
+
+    def refresh(self, *_):
+        dtype = self.dtype_var.get()
+        if dtype == "string":
+            self.default_label.grid()
+            self.default_entry.grid()
+        else:
+            self.default_label.grid_remove()
+            self.default_entry.grid_remove()
+
+    def on_default_value_change(self, *_):
+        if self.dtype_var.get() == "string":
+            value = self.default_entry.get()
+            if value:
+                required_count = len(value) + 1
+                current_count = self.count_entry.get().strip()
+                if not current_count or int(current_count) < required_count:
+                    self.count_entry.delete(0, tk.END)
+                    self.count_entry.insert(0, str(required_count))
 
     def validate(self):
         if not self.name_entry.get().strip():
             messagebox.showwarning("Validation error", "Field name cannot be empty.")
             return False
-        if self.count_entry.get().strip():
+
+        dtype = self.dtype_var.get()
+        count_text = self.count_entry.get().strip()
+        default_text = self.default_entry.get().strip()
+
+        if count_text:
             try:
-                if int(self.count_entry.get().strip()) < 1:
+                if int(count_text) < 1:
                     raise ValueError
             except ValueError:
                 messagebox.showwarning("Validation error", "Count must be a positive integer.")
                 return False
+
+        if dtype == "string":
+            if not count_text and not default_text:
+                messagebox.showwarning("Validation error", "String fields require a default value or count.")
+                return False
+            if default_text:
+                required_count = len(default_text) + 1
+                if not count_text or int(count_text) < required_count:
+                    self.count_entry.delete(0, tk.END)
+                    self.count_entry.insert(0, str(required_count))
+                    count_text = self.count_entry.get().strip()
+
         return True
 
     def apply(self):
@@ -245,9 +289,17 @@ class StructFieldDialog(simpledialog.Dialog):
             "name": self.name_entry.get().strip(),
             "data_type": self.dtype_var.get(),
         }
-        count = self.count_entry.get().strip()
-        if count:
-            self.result["count"] = int(count)
+        default_value = self.default_entry.get().strip()
+        count_text = self.count_entry.get().strip()
+
+        if self.dtype_var.get() == "string":
+            if default_value and not count_text:
+                count_text = str(len(default_value) + 1)
+
+        if count_text:
+            self.result["count"] = int(count_text)
+        if default_value:
+            self.result["default_value"] = default_value
 
 
 def load_config(path):
@@ -270,38 +322,51 @@ def save_config(config, path):
         return False
 
 
-def run_codegen(config_path, out_dir):
+def run_codegen(config_path, out_dir, root=None):
     try:
         result = subprocess.run(["py", CODEGEN_SCRIPT, "generate", config_path, "--out-dir", out_dir], capture_output=True, text=True)
         if result.returncode != 0:
             messagebox.showerror("Generate error", result.stderr or result.stdout)
+            if root is not None:
+                root.status_var.set("Generation failed")
             return False
         messagebox.showinfo("Generate complete", result.stdout)
+        if root is not None:
+            root.status_var.set("Generation complete")
         return True
     except Exception as exc:
         messagebox.showerror("Generate error", str(exc))
+        if root is not None:
+            root.status_var.set("Generation failed")
         return False
 
 
 def build_main_window(root):
     root.title("Telemetry Config UI")
-    root.geometry("900x600")
+    root.geometry("920x620")
+    root.option_add("*Font", "Segoe UI 10")
+    root.configure(bg="#F5F5F5")
 
-    top_frame = tk.Frame(root, padx=10, pady=10)
+    top_frame = tk.Frame(root, bg="#F5F5F5", padx=10, pady=10)
     top_frame.pack(fill="x")
 
-    tk.Button(top_frame, text="Load JSON", command=lambda: load_json(root)).pack(side="left", padx=4)
-    tk.Button(top_frame, text="Save JSON", command=lambda: save_json(root)).pack(side="left", padx=4)
-    tk.Button(top_frame, text="Generate C Files", command=lambda: generate_files(root)).pack(side="left", padx=4)
-    tk.Button(top_frame, text="Add Sensor", command=lambda: add_sensor(root)).pack(side="left", padx=4)
-    tk.Button(top_frame, text="Edit Sensor", command=lambda: edit_sensor(root)).pack(side="left", padx=4)
-    tk.Button(top_frame, text="Remove Sensor", command=lambda: remove_sensor(root)).pack(side="left", padx=4)
+    tk.Button(top_frame, text="Load JSON", width=12, command=lambda: load_json(root)).pack(side="left", padx=4)
+    tk.Button(top_frame, text="Save JSON", width=12, command=lambda: save_json(root)).pack(side="left", padx=4)
+    tk.Button(top_frame, text="Generate C Files", width=15, command=lambda: generate_files(root)).pack(side="left", padx=4)
+    tk.Button(top_frame, text="Add Sensor", width=12, command=lambda: add_sensor(root)).pack(side="left", padx=4)
+    tk.Button(top_frame, text="Edit Sensor", width=12, command=lambda: edit_sensor(root)).pack(side="left", padx=4)
+    tk.Button(top_frame, text="Remove Sensor", width=12, command=lambda: remove_sensor(root)).pack(side="left", padx=4)
 
-    list_frame = tk.Frame(root, padx=10, pady=10)
+    separator = tk.Frame(root, height=2, bd=1, relief="sunken", bg="#CCCCCC")
+    separator.pack(fill="x", padx=10, pady=(0, 6))
+
+    list_frame = tk.Frame(root, bg="#F5F5F5", padx=10, pady=10)
     list_frame.pack(fill="both", expand=True)
 
-    tk.Label(list_frame, text="Sensors:").pack(anchor="w")
-    sensor_list = tk.Listbox(list_frame, name="sensor_list", selectmode="browse")
+    header_label = tk.Label(list_frame, text="Sensors:", bg="#F5F5F5", font=("Segoe UI", 11, "bold"))
+    header_label.pack(anchor="w", pady=(0, 6))
+
+    sensor_list = tk.Listbox(list_frame, name="sensor_list", selectmode="browse", activestyle="dotbox", borderwidth=1, relief="solid")
     sensor_list.pack(fill="both", expand=True, side="left")
 
     scrollbar = tk.Scrollbar(list_frame, orient="vertical", command=sensor_list.yview)
@@ -311,6 +376,10 @@ def build_main_window(root):
     root.config(menu=build_menu(root))
     root.sensor_list = sensor_list
     root.config_data = None
+    root.config_path = None
+    root.status_var = tk.StringVar(value="Ready")
+    status_bar = tk.Label(root, textvariable=root.status_var, anchor="w", bg="#EEEEEE", fg="#333333", padx=8, pady=4)
+    status_bar.pack(fill="x", side="bottom")
 
     return root
 
@@ -349,6 +418,7 @@ def load_json(root):
         root.config_data = config
         root.config_path = path
         refresh_sensor_list(root)
+        root.status_var.set(f"Loaded config: {os.path.basename(path)}")
 
 
 def save_json(root):
@@ -361,11 +431,14 @@ def save_json(root):
     if save_config(root.config_data, path):
         root.config_path = path
         messagebox.showinfo("Saved", f"Configuration saved to {path}")
+        root.status_var.set(f"Saved config: {os.path.basename(path)}")
 
 
 def add_sensor(root):
     editor = SensorEditor(root, "Add sensor")
     if editor.result:
+        if root.config_data is None:
+            root.config_data = {}
         root.config_data.setdefault("sensors", []).append(editor.result)
         refresh_sensor_list(root)
 
@@ -408,7 +481,7 @@ def generate_files(root):
     output_dir = filedialog.askdirectory(title="Choose output folder", initialdir=os.path.join(os.path.dirname(__file__), "..", "generatedconfigs"))
     if not output_dir:
         return
-    run_codegen(path, output_dir)
+    run_codegen(path, output_dir, root)
 
 
 def main():
