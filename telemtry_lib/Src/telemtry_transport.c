@@ -5,7 +5,7 @@
  */
 
 #include "../Inc/telemtry_transport.h"
-#include "usart.h"
+
 #include <string.h>
 #include "telemtrycustom.h"
 #include "info_config.h"

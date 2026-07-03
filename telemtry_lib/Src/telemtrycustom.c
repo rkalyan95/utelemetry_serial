@@ -1,5 +1,4 @@
 #include "telemtrycustom.h"
-#include "usart.h"
 #include <string.h> 
 #include "telemtry_transport.h"
 /**
