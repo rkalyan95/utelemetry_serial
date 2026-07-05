@@ -3,6 +3,8 @@
 
 // Define port and pins according to your ESP32 hardware
 #define UART_NUM_ESP UART_NUM_1
+#define UART_TX_PIN 18
+#define UART_RX_PIN 19
 
 bool telemtry_hw_init(void) {
     uart_config_t uart_config = {
@@ -17,7 +19,7 @@ bool telemtry_hw_init(void) {
     if (uart_param_config(UART_NUM_ESP, &uart_config) != ESP_OK) {
         return false;
     }
-    uart_set_pin(UART_NUM_1, 18, 19, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
+    uart_set_pin(UART_NUM_1, UART_TX_PIN, UART_RX_PIN, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
     // Install the driver with a 256-byte RX buffer
     if (uart_driver_install(UART_NUM_1, 2048, 0, 0, NULL, 0) != ESP_OK) {
         return false;

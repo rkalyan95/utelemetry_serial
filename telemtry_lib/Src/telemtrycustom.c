@@ -71,7 +71,7 @@ uint8_t telemtry_send_boot_message(void)
 void telemtry_wait_for_boot_sync(void)
 {
     uint8_t boot_sync_signal = 0x00;
-    while (boot_sync_signal != 0xAA)
+    while (boot_sync_signal != TELEMTRY_ID_SYNCH)
     {
         telemtry_rx_cb(&boot_sync_signal, 1);
     }
@@ -240,7 +240,7 @@ void register_response(tel_cmd_t **cmd, uint8_t number_of_devices)
         return;
     }
     uint8_t crc[2] = {0xFF,0xFF}; 
-    uint8_t ack_success[2] = {0xAA, 0x55};
+    uint8_t ack_success[2] = {TELEMTRY_ID_SYNCH, TELEMTRY_ID_CMD};
     uint8_t ack_failed[2] = {0xDE, 0xAD};
     for(int i = 0; i < number_of_devices; i++)
     {
