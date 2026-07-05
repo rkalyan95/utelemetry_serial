@@ -19,11 +19,19 @@ void telemtry_init(void)
 
 void telemtry_configure(void)
 {
+    if(TOTAL_TELEMTRY_ID<=1)
+    {
+        return;
+    }
     register_devices(sensor_array, TOTAL_TELEMTRY_ID-1);
     register_response(sensor_array, TOTAL_TELEMTRY_ID-1);
 }
 
 void telemtry_send( tel_information_t **buffers, uint8_t buffer_id)
 {
+    if(buffers == NULL || *buffers == NULL || buffer_id >= (TOTAL_TELEMTRY_ID - 1))
+    {
+        return;
+    }
     telemtry_custom_send((buffers[buffer_id]));
 }
