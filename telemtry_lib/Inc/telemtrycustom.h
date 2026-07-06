@@ -8,7 +8,7 @@ extern "C" {
 }
 #endif
 #include <stdint.h>
-
+#include <stdbool.h>
 typedef uint8_t (*telemtry_custom_send_cb)(uint8_t *data, uint16_t len);
 typedef uint8_t (*telemtry_custom_receive_cb)(uint8_t *data, uint16_t len);
 extern telemtry_custom_send_cb telemtry_cb;
@@ -55,13 +55,14 @@ typedef enum
 
 extern tel_information_t *telemtry_information;
 extern tel_cmd_t *telemtry_cmd;
-void telemtry_init_callback(telemtry_custom_send_cb cb,telemtry_custom_receive_cb rx_cb);
+bool telemtry_init_callback(telemtry_custom_send_cb cb,telemtry_custom_receive_cb rx_cb);
 void telemtry_custom_send(tel_information_t *serial_telemetry);
 void telemtry_sendsync(void);
 void telemtry_sendlen(void);
 void telemtry_sendid(void);
 void register_devices(tel_cmd_t **cmd , uint8_t number_of_devices);
 void register_response(tel_cmd_t **cmd, uint8_t number_of_devices);
-void telemtry_wait_for_boot_sync(void);
+bool telemtry_wait_for_boot_sync(void);
 uint8_t telemtry_send_boot_message(void);
+void telemtry_senderror_info(char *error_msg, uint16_t len);
 #endif /* TELEMTRY_H */

@@ -14,6 +14,7 @@ tel_information_t *telemtry_information;
 tel_cmd_t *telemtry_cmd;
 telemtry_custom_send_cb telemtry_cb;
 telemtry_custom_receive_cb telemtry_rx_cb;
+uint32_t telmtry_retry_count = 0;
 /**
  * @brief Update a CRC-16 value over a byte buffer.
  *
@@ -44,16 +45,16 @@ uint16_t telemtry_update_crc16(uint16_t crc_seed, const uint8_t *data, uint16_t 
  * @param cb Transmit callback used to send bytes over UART.
  * @param rx_cb Receive callback used to read bytes from UART.
  */
-void telemtry_init_callback(telemtry_custom_send_cb cb,telemtry_custom_receive_cb rx_cb)
+bool telemtry_init_callback(telemtry_custom_send_cb cb,telemtry_custom_receive_cb rx_cb)
 {
     if( cb == NULL || rx_cb == NULL)
     {
-        return;
+        return 0;
     }
     
     telemtry_cb = cb;
     telemtry_rx_cb = rx_cb; // Initialize receive callback to NULL
-    
+    return 1;
 }
 
 /**
@@ -68,13 +69,38 @@ uint8_t telemtry_send_boot_message(void)
 }
 
 /* Blocking wait: polls UART until sync byte 0xAA is received. */
-void telemtry_wait_for_boot_sync(void)
+bool telemtry_wait_for_boot_sync(void)
 {
+    const char err_msg[] = "Timeout.. Please restart the device or check connections\r\n";
     uint8_t boot_sync_signal = 0x00;
-    while (boot_sync_signal != TELEMTRY_ID_SYNCH)
+    while (boot_sync_signal != TELEMTRY_ID_SYNCH && telmtry_retry_count < 10)
     {
         telemtry_rx_cb(&boot_sync_signal, 1);
+        telmtry_retry_count++;
     }
+
+    if(telmtry_retry_count >= 10)
+    {
+        telemtry_cb((uint8_t *)err_msg, (uint16_t)(sizeof(err_msg) - 1));
+        telmtry_retry_count = 0;
+        return false;
+    }
+    else
+    {
+        // Reset retry count on successful sync
+        telmtry_retry_count = 0;
+        return true;
+    }
+    
+}
+
+void telemtry_senderror_info(char *error_msg, uint16_t len)
+{
+    if(telemtry_cb == NULL || error_msg == NULL || len == 0)
+    {
+        return;
+    }
+    telemtry_cb((uint8_t *)error_msg, len);
 }
 /**
  * @brief Send a telemetry packet over the registered transport.

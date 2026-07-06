@@ -2,48 +2,29 @@
 #include "telemtrycustom.h"
 #include <stdint.h>
 
-static float test_data = 0;
+usonic_t usonic_data = { 0, 0, 0, "hr-04" };
 
-static int8_t test2_data = 0;
-
-tel_information_t sensor_test = {
+tel_information_t sensor_usonic = {
     .data_synch = TELEMTRY_ID_SYNCH,
-    .information_type = TELEMTRY_TYPE_FLOAT,
-    .information_id = TELEMTRY_ID_TEST,
-    .information_len = sizeof(test_data),
-    .information_buffer = &test_data
+    .information_type = TELEMTRY_TYPE_STRUCT,
+    .information_id = TELEMTRY_ID_USONIC,
+    .information_len = sizeof(usonic_data),
+    .information_buffer = &usonic_data
 };
 
-tel_information_t sensor_test2 = {
-    .data_synch = TELEMTRY_ID_SYNCH,
-    .information_type = TELEMTRY_TYPE_INT8,
-    .information_id = TELEMTRY_ID_TEST2,
-    .information_len = sizeof(test2_data),
-    .information_buffer = &test2_data
-};
-
-tel_cmd_t cmd_test = {
+tel_cmd_t cmd_usonic = {
     .cmd_synch = TELEMTRY_ID_CMD,
-    .cmd_id = TELEMTRY_ID_TEST,
-    .tx_buffer = (uint8_t *)"test",
-    .crc = 0xFFFF
-};
-
-tel_cmd_t cmd_test2 = {
-    .cmd_synch = TELEMTRY_ID_CMD,
-    .cmd_id = TELEMTRY_ID_TEST2,
-    .tx_buffer = (uint8_t *)"test2",
+    .cmd_id = TELEMTRY_ID_USONIC,
+    .tx_buffer = (uint8_t *)"usonic:@IIH6S",
     .crc = 0xFFFF
 };
 
 tel_cmd_t *sensor_array[TOTAL_TELEMTRY_ID-1] = {
 
-    &cmd_test,
-    &cmd_test2,
+    &cmd_usonic,
 };
 
 tel_information_t *buffers_array[TOTAL_TELEMTRY_ID-1] = {
 
-    &sensor_test,
-    &sensor_test2,
+    &sensor_usonic,
 };

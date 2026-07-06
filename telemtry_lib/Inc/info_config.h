@@ -9,12 +9,17 @@
 /* Generated telemetry IDs for sensors and commands. */
 enum
 {
-    TELEMTRY_ID_TEST = 0x01,
-    TELEMTRY_ID_TEST2 = 0x02,
+    TELEMTRY_ID_USONIC = 0x01,
     /* Add only above this line */
     TOTAL_TELEMTRY_ID,
 };
 
+typedef struct {
+    uint32_t sonic_timestamp;
+    uint32_t sonic_duration;
+    uint16_t distance_mm;
+    char sonic_name[6];
+} usonic_t;
 
 
 extern tel_cmd_t *sensor_array[TOTAL_TELEMTRY_ID-1];

@@ -19,8 +19,12 @@ extern "C" {
 /** Initialize telemetry subsystem on STM32. */
 void telemtry_init(void);
 void telemtry_configure(void);
-void telemtry_send( tel_information_t **buffers, uint8_t buffer_id);
 
+uint8_t telemtry_send( tel_information_t **buffers, uint8_t buffer_id);
+
+extern bool sync_status;
+extern bool hw_init;
+extern bool callback_init;
 #ifdef __cplusplus
 }
 #endif
